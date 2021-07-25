@@ -57,15 +57,47 @@ keymap = {
     'ץ':27,
 }
 
+reverse_keymap = {
+    1: 't',
+    2: 'c',
+    3: 'd',
+    4: 's',
+    5: 'v',
+    6: 'u',
+    7: 'z',
+    8: 'j',
+    9: 'y',
+    10: 'h',
+    11: 'f',
+    12: 'k',
+    13: 'n',
+    14: 'b',
+    15: 'x',
+    16: 'g',
+    17: 'p',
+    18: 'm',
+    19: 'e',
+    20: 'r',
+    21: 'a',
+    22: ',',
+    23: 'i',
+    24: 'o',
+    25: 'l',
+    26: ';',
+    27: '.',
+    28: 'q',
+    29: 'w',
+}
+
 def decode_word(word):
     try:
-        decoded_bytes = []
+        decoded_string = ''
         for char in word:
-            decoded_bytes.append(keymap[char])
+            decoded_string += reverse_keymap[keymap[char]]
     except:
         print(word)
         
-    return np.array(decoded_bytes)
+    return decoded_string
 
 def get_words_from_file(filename):
     with open(filename,encoding='utf8') as file:
@@ -81,5 +113,5 @@ if __name__ == '__main__':
     words = get_words_from_file('hebrew_words.txt')
     for word in words:
         df = df.append({'word':word,'decoded_word':decode_word(word),'language':'hebrew'},ignore_index=True)
-    df.sample(frac=1).reset_index(drop=True)#.to_csv('dataset.csv',encoding='utf8',index=False)
+    df.sample(frac=1).reset_index(drop=True).to_csv('dataset.csv',encoding='utf8',index=False)
     print(df)
