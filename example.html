@@ -40,6 +40,10 @@
 </head>
 	<body>
 		<div id='input' class="input" contentEditable="true" data-placeholder="Type somthing here:"></div>
+		<footer>
+			<p id='eng-score'>English Score: </p>
+			<p id='heb-score'>Hebrew Score: </p>
+		</footer>
 	</body>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
@@ -71,35 +75,71 @@
 		var currentModelResults = [];
 		var allModelResults = [];
 		var overAllResults = [0,0];
+		var overAllResultsArray = [];
 
 		$('#input').keyup((e) => {
 			if(wordsCounter >= MAX_WORDS)
 				return;
 			let value = keymap[e.key];
 			if(!value) {
-				hebrewText += e.key
-				englishText += e.key
-				encodedArrays.push(encodedArray);
-				encodedArray = new Array(TENSOR_SIZE).fill(0);
-				currentIndex = 0;
-				allModelResults.push(currentModelResults);
-				overAllResults[0] = (overAllResults[0] * wordsCounter + currentModelResults[0] * (MAX_WORDS - wordsCounter)) / (MAX_WORDS);
-				overAllResults[1] = (overAllResults[1] * wordsCounter + currentModelResults[1] * (MAX_WORDS - wordsCounter)) / (MAX_WORDS);
-				wordsCounter++;
-				console.log(overAllResults);
+				if(e.key === 'Backspace') {
+					let lastChar = englishText[englishText.length - 1];
+					if(lastChar === ' ') {
+						wordsCounter--;
+						hebrewText = hebrewText.substring(0,hebrewText.length - 1);
+						englishText = englishText.substring(0,englishText.length - 1);
+						if(encodedArrays.length != 0) {
+							encodedArrays.splice(-1,1);
+							if(encodedArrays.length != 0) {
+								encodedArray = encodedArrays[encodedArrays.length - 1];
+								overAllResults = overAllResultsArray[overAllResultsArray.length - 1];
+								overAllResultsArray.splice(-1,1);
+							}
+						}
+					}
+					else {
+						encodedArray[currentIndex--] = 0;
+						hebrewText = hebrewText.substring(0,hebrewText.length - 1);
+						englishText = englishText.substring(0,englishText.length - 1);
+					}
+					currentModelResults = model.predict(tf.tensor([encodedArray])).dataSync();
+					if(currentModelResults[0] * (MAX_WORDS - wordsCounter) + overAllResults[0] * wordsCounter < 
+						currentModelResults[1] * (MAX_WORDS - wordsCounter) + overAllResults[1] * wordsCounter ) {
+						$('#input').text(hebrewText);
+					}
+					else {
+						$('#input').text(englishText);
+					}
+				}
+				else {
+					hebrewText += e.key
+					englishText += e.key
+					encodedArrays.push(encodedArray);
+					encodedArray = new Array(TENSOR_SIZE).fill(0);
+					currentIndex = 0;
+					allModelResults.push(currentModelResults);
+					overAllResultsNew = [0,0];
+					overAllResultsNew[0] = (overAllResults[0] * wordsCounter + currentModelResults[0] * (MAX_WORDS - wordsCounter)) / (MAX_WORDS);
+					overAllResultsNew[1] = (overAllResults[1] * wordsCounter + currentModelResults[1] * (MAX_WORDS - wordsCounter)) / (MAX_WORDS);
+					overAllResultsArray.push(overAllResults);
+					overAllResults = overAllResultsNew;
+					wordsCounter++;
+				}
 			}
 			else {
 				encodedArray[currentIndex++] = value / 29;
 				hebrewText += reverseKeymapHebrew[value]
 				englishText += reverseKeymapEnglish[value]
 				currentModelResults = model.predict(tf.tensor([encodedArray])).dataSync();
-				if(currentModelResults[0] * (MAX_WORDS - wordsCounter) + overAllResults[0] * wordsCounter < 
-				currentModelResults[1] * (MAX_WORDS - wordsCounter) + overAllResults[1] * wordsCounter ) {
+				if((currentModelResults[0] * (MAX_WORDS - wordsCounter) + overAllResults[0] * wordsCounter) / MAX_WORDS < 
+					(currentModelResults[1] * (MAX_WORDS - wordsCounter) + overAllResults[1] * wordsCounter) / MAX_WORDS) {
 					$('#input').text(hebrewText);
 				}
 				else {
 					$('#input').text(englishText);
 				}
+				$('#eng-score').text(`English Score: ${(currentModelResults[0] * (MAX_WORDS - wordsCounter) + overAllResults[0] * wordsCounter) / MAX_WORDS}`);
+				$('#heb-score').text(`Hebrew Score: ${(currentModelResults[1] * (MAX_WORDS - wordsCounter) + overAllResults[1] * wordsCounter) / MAX_WORDS}`);
 			}
 			
 		});
